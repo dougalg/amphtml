@@ -17,6 +17,10 @@
 import {isLayoutSizeDefined} from '../../../src/layout';
 import {loadPromise} from '../../../src/event-helper';
 
+// const FRAME_SRC = 'https://viafoura.io/';
+const FRAME_SRC = 'https://192.168.120.131:8001/amp-widget.html';
+
+// TODO: extend AMP.iframe somehow?
 class AmpViafoura extends AMP.BaseElement {
 
   /** @override */
@@ -36,18 +40,21 @@ class AmpViafoura extends AMP.BaseElement {
 
   /** @override */
   layoutCallback() {
-    const limit = this.element.getAttribute("data-limit");
-    const sort = this.element.getAttribute("data-sort");
-    const path = this.element.getAttribute("data-path");
-    const title = this.element.getAttribute("data-title");
-    const unique_id = this.element.getAttribute("data-unique-id");
+    const getAttr = attr => encodeURIComponent(this.element.getAttribute(attr));
+    const widget = getAttr("data-widget");
+    const limit = getAttr("data-limit");
+    const sort = getAttr("data-sort");
+    const path = getAttr("data-path");
+    const title = getAttr("data-title");
+    const unique_id = getAttr("data-unique-id");
+
     const width = this.element.getAttribute('width');
     const height = this.element.getAttribute('height');
 
     const iframe = document.createElement('iframe');
     iframe.setAttribute('frameborder', '0');
-    iframe.src = 'https://vine.co/v/' +
-      encodeURIComponent(vineid) + '/embed/simple';
+    iframe.src = `${FRAME_SRC}?limit=${limit}&sort=${sort}&path=${path}&title=`+
+        `${title}&unique_id=${unique_id}&widget=${widget}`;
 
     this.applyFillContent(iframe);
 
@@ -72,3 +79,5 @@ class AmpViafoura extends AMP.BaseElement {
     return false;
   }
 }
+
+AMP.registerElement('amp-viafoura', AmpViafoura);
