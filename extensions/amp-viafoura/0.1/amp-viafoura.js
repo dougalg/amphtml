@@ -18,7 +18,7 @@ import {isLayoutSizeDefined} from '../../../src/layout';
 import {loadPromise} from '../../../src/event-helper';
 
 // const FRAME_SRC = 'https://viafoura.io/';
-const FRAME_SRC = 'https://192.168.120.131:8001/amp-widget.html';
+const FRAME_SRC = 'https://tim.whothaman.com/proxy_template.php';
 
 // TODO: extend AMP.iframe somehow?
 class AmpViafoura extends AMP.BaseElement {
@@ -40,21 +40,24 @@ class AmpViafoura extends AMP.BaseElement {
 
   /** @override */
   layoutCallback() {
-    const getAttr = attr => encodeURIComponent(this.element.getAttribute(attr));
-    const widget = getAttr("data-widget");
-    const limit = getAttr("data-limit");
-    const sort = getAttr("data-sort");
-    const path = getAttr("data-path");
-    const title = getAttr("data-title");
-    const unique_id = getAttr("data-unique-id");
+    let attributes = this.element.attributes;
+    let params = '';
+    for (i = 0; i < attributes.length; i++) {
+        let attributeName = attributes[i].nodeName;
+        if (attributeName.match('data-.*')) {
+            value = encodeURIComponent(this.element.getAttribute(attributeName));
+            attributeName = attributeName.slice(5);
+            params += '&' + encodeURIComponent(attributeName) + '=' + value;
+        }
+    }
+    // debugger;
 
     const width = this.element.getAttribute('width');
     const height = this.element.getAttribute('height');
 
     const iframe = document.createElement('iframe');
     iframe.setAttribute('frameborder', '0');
-    iframe.src = `${FRAME_SRC}?limit=${limit}&sort=${sort}&path=${path}&title=`+
-        `${title}&unique_id=${unique_id}&widget=${widget}`;
+    iframe.src = `${FRAME_SRC}?${params}`;
 
     this.applyFillContent(iframe);
 
