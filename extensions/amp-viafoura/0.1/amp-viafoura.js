@@ -14,17 +14,13 @@
  * limitations under the License.
  */
 
-import {
-    isLayoutSizeDefined
-}
-from '../../../src/layout';
-import {
-    loadPromise
-}
-from '../../../src/event-helper';
+import {isLayoutSizeDefined} from '../../../src/layout';
+import {loadPromise} from '../../../src/event-helper';
+import {listen} from '../../../src/iframe-helper';
 
+const SRC_DOMAIN = 'dougal.whothaman.com';
 // const FRAME_SRC = 'https://viafoura.io/';
-const FRAME_SRC = 'https://tim.whothaman.com/amp.php';
+const FRAME_SRC = `https://${SRC_DOMAIN}/amp.php`;
 
 // TODO: extend AMP.iframe somehow?
 class AmpViafoura extends AMP.BaseElement {
@@ -32,7 +28,7 @@ class AmpViafoura extends AMP.BaseElement {
     /** @override */
     preconnectCallback(onLayout) {
         // The viafoura iframe
-        this.preconnect.url('https://???.viafoura.com', onLayout);
+        this.preconnect.url(`https://${SRC_DOMAIN}`, onLayout);
         // The Viafoura api
         this.preconnect.url('https://api.viafoura.com', onLayout);
         // Viafoura assets loaded in the iframe
@@ -57,8 +53,6 @@ class AmpViafoura extends AMP.BaseElement {
             }
         }
 
-        window.addEventListener("message", this.resizeFrame.bind(this), false);
-
         const width = this.element.getAttribute('width');
         const height = this.element.getAttribute('height');
 
@@ -75,6 +69,13 @@ class AmpViafoura extends AMP.BaseElement {
         /** @private {?Element} */
         this.iframe_ = iframe;
 
+        // window.addEventListener("message", this.resizeFrame.bind(this), false);
+        listen(iframe, 'embed-size', function (data) {
+            iframe.height = data.height +'px';
+            this.element.setAttribute('height', data.height +'px');
+            this.element.style.height = data.height +'px';
+        }.bind(this));
+
         return loadPromise(iframe);
     }
 
@@ -87,15 +88,6 @@ class AmpViafoura extends AMP.BaseElement {
         // No need to do layout later - user action will be expect to resume
         // the playback
         return false;
-    }
-
-    resizeFrame(event) {
-        var origin = event.origin || event.originalEvent.origin;
-        if (origin !== "https://tim.whothaman.com" /*window.location.origin*/ )
-            return;
-
-        // extra 300 px buffer for things
-        this.element.style.height = event.data + 300 + "px";
     }
 }
 
