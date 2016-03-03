@@ -16,17 +16,16 @@
 
 import {isLayoutSizeDefined} from '../../../src/layout';
 import {loadPromise} from '../../../src/event-helper';
-
-// const FRAME_SRC = 'https://viafoura.io/';
-const FRAME_SRC = 'https://192.168.120.131:8001/amp-widget.html';
+import {listen} from '../../../src/iframe-helper';
+import {locations} from './locations';
+const SRC_DOMAIN = 'api.viafoura.com';
+const FRAME_SRC = `https://${SRC_DOMAIN}/amp.php`;
 
 // TODO: extend AMP.iframe somehow?
 class AmpViafoura extends AMP.BaseElement {
 
   /** @override */
   preconnectCallback(onLayout) {
-    // The viafoura iframe
-    this.preconnect.url('https://???.viafoura.com', onLayout);
     // The Viafoura api
     this.preconnect.url('https://api.viafoura.com', onLayout);
     // Viafoura assets loaded in the iframe
@@ -38,32 +37,59 @@ class AmpViafoura extends AMP.BaseElement {
     return isLayoutSizeDefined(layout);
   }
 
+  getDataAttrs() {
+    return Array.prototype.slice.call(this.element.attributes)
+      .map(attr => attr.nodeName)
+      .filter(attrName => attrName.match('data-.*'))
+      .map(name => [name, this.element.getAttribute(name)])
+  }
+
+  getPageAttrs() {
+    var attributes = locations();
+    attributes.push(['url', location.href])
+    return attributes;
+  }
+
+  getParams() {
+    return this.getDataAttrs()
+      .concat(this.getPageAttrs())
+      .map(pair => `${pair[0]}=${encodeURIComponent(pair[1])}`)
+      .reduce((prev, cur) => prev ? `${prev}&${cur}` : cur);
+  }
+
   /** @override */
   layoutCallback() {
-    const getAttr = attr => encodeURIComponent(this.element.getAttribute(attr));
-    const widget = getAttr("data-widget");
-    const limit = getAttr("data-limit");
-    const sort = getAttr("data-sort");
-    const path = getAttr("data-path");
-    const title = getAttr("data-title");
-    const unique_id = getAttr("data-unique-id");
 
     const width = this.element.getAttribute('width');
     const height = this.element.getAttribute('height');
 
     const iframe = document.createElement('iframe');
     iframe.setAttribute('frameborder', '0');
-    iframe.src = `${FRAME_SRC}?limit=${limit}&sort=${sort}&path=${path}&title=`+
-        `${title}&unique_id=${unique_id}&widget=${widget}`;
+    iframe.src = `${FRAME_SRC}?${this.getParams()}`;
 
     this.applyFillContent(iframe);
 
     iframe.width = width;
     iframe.height = height;
+
+    this.isResizable_ = this.element.hasAttribute('resizable');
+    if (this.isResizable_) {
+      iframe.setAttribute('scrolling', 'no');
+    }
+
     this.element.appendChild(iframe);
 
     /** @private {?Element} */
     this.iframe_ = iframe;
+
+    var currentHeight = 0;
+    listen(iframe, 'embed-size', data => {
+      if (currentHeight !== data.height) {
+        currentHeight = data.height;
+        iframe.width = currentHeight;
+        this.element.style.height = currentHeight + 'px';
+      }
+    });
 
     return loadPromise(iframe);
   }
@@ -71,7 +97,7 @@ class AmpViafoura extends AMP.BaseElement {
   /** @override */
   documentInactiveCallback() {
     if (this.iframe_ && this.iframe_.contentWindow) {
-      this.iframe_.contentWindow./*OK*/postMessage('pause', '*');
+      this.iframe_.contentWindow. /*OK*/ postMessage('pause', '*');
     }
 
     // No need to do layout later - user action will be expect to resume
